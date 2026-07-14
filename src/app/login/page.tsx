@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { FormEvent, useState } from "react";
+import { CopySnippet } from "@/components/copy-snippet";
 import { authClient } from "@/lib/auth-client";
 
 function LoginCard() {
@@ -73,7 +74,17 @@ export default function LoginPage() {
     <main className="flex flex-1 flex-col lg:flex-row-reverse">
       {/* login: sticky right rail on desktop, first on mobile */}
       <aside className="flex items-center justify-center border-b border-line px-6 py-14 lg:sticky lg:top-0 lg:h-screen lg:w-[35%] lg:border-b-0 lg:border-l lg:py-0">
-        <LoginCard />
+        <div className="w-full max-w-sm space-y-8">
+          <LoginCard />
+          <div className="space-y-3">
+            <h2 className="eyebrow">Install the skill</h2>
+            <CopySnippet command="npx skills add campingas/dotfiles --skill html-planning" />
+            <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted/70">
+              Works with Claude Code, Codex and 70+ agents · auto-archiving activates once an API
+              token is saved in ~/.config/plan-saver/config.json
+            </p>
+          </div>
+        </div>
       </aside>
 
       {/* showcase: left 65%, scrolls with the page */}
