@@ -59,85 +59,87 @@ export default async function DocumentPage({
       <div>
         <Link
           href={`/p/${proj.slug}`}
-          className="text-sm text-zinc-500 hover:underline dark:text-zinc-400"
+          className="eyebrow hover:text-accent transition-colors"
         >
           ← {proj.displayName}
         </Link>
-        <div className="mt-1 flex items-center gap-2">
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          <h1 className="display text-[30px]">{selected.title}</h1>
           <KindBadge kind={doc.kind} />
-          <h1 className="text-xl font-semibold tracking-tight">{selected.title}</h1>
+          <span className="stamp text-muted">rev v{selected.number}</span>
         </div>
       </div>
 
-      <div className="flex flex-col gap-6 lg:flex-row">
-        <aside className="w-full shrink-0 space-y-6 lg:w-64">
-          <section>
-            <h2 className="mb-2 text-sm font-medium text-zinc-500 dark:text-zinc-400">Versions</h2>
-            <ul className="space-y-1">
+      <div className="flex flex-col gap-8 lg:flex-row">
+        <aside className="w-full shrink-0 space-y-6 lg:w-60">
+          <section className="border border-line-strong bg-panel">
+            <h2 className="eyebrow border-b border-line-strong px-4 py-2">Revisions</h2>
+            <ul>
               {versions.map((x) => (
-                <li key={x.id}>
+                <li key={x.id} className="border-b border-line last:border-b-0">
                   <Link
                     href={versionHref(x.number)}
-                    className={`block rounded px-2 py-1.5 text-sm ${
+                    className={`flex items-baseline justify-between px-4 py-2.5 font-mono text-sm transition-colors ${
                       x.id === selected.id
-                        ? "bg-zinc-100 font-medium dark:bg-zinc-800"
-                        : "text-zinc-500 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:bg-zinc-900"
+                        ? "border-l-2 border-accent bg-panel-2 text-ink"
+                        : "border-l-2 border-transparent text-muted hover:text-ink"
                     }`}
                   >
-                    v{x.number}
-                    <span className="block text-xs text-zinc-400 dark:text-zinc-500">
-                      {formatDate(x.createdAt)}
-                    </span>
+                    <span>v{x.number}</span>
+                    <span className="text-xs">{formatDate(x.createdAt)}</span>
                   </Link>
                 </li>
               ))}
             </ul>
           </section>
 
-          <section>
-            <h2 className="mb-2 text-sm font-medium text-zinc-500 dark:text-zinc-400">
-              Share links (v{selected.number})
+          <section className="border border-line-strong bg-panel">
+            <h2 className="eyebrow border-b border-line-strong px-4 py-2">
+              Share links · v{selected.number}
             </h2>
-            <div className="space-y-2">
+            <div className="space-y-3 p-4">
+              {shares.length === 0 && (
+                <p className="text-xs text-muted">None issued. A share link opens this revision without signing in.</p>
+              )}
               {shares.map((s) => (
-                <div key={s.id} className="space-y-1 rounded-md border border-zinc-200 p-2 dark:border-zinc-800">
+                <div key={s.id} className="space-y-1.5 border border-line bg-panel-2 p-2.5">
                   <input
                     readOnly
                     value={`${base}/s/${s.token}`}
-                    className="w-full bg-transparent text-xs text-zinc-600 outline-none dark:text-zinc-300"
+                    className="w-full bg-transparent font-mono text-xs text-ink outline-none"
                   />
                   <form action={revokeShareLink.bind(null, s.id)}>
-                    <button className="text-xs text-red-600 hover:underline dark:text-red-400">
+                    <button className="stamp cursor-pointer text-stamp hover:bg-stamp hover:text-paper transition-colors">
                       Revoke
                     </button>
                   </form>
                 </div>
               ))}
               <form action={createShareLink.bind(null, selected.id)}>
-                <button className="w-full rounded-md border border-zinc-300 px-2 py-1.5 text-sm hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-900">
-                  Create share link
-                </button>
+                <button className="btn btn-ghost w-full">Issue share link</button>
               </form>
             </div>
           </section>
 
           <a
             href={`/api/view/${selected.id}?download=1`}
-            className="block text-sm text-zinc-500 hover:underline dark:text-zinc-400"
+            className="eyebrow block hover:text-accent transition-colors"
           >
-            Download raw HTML
+            ↓ Download raw HTML
           </a>
         </aside>
 
-        {/* sandbox without allow-same-origin: archived HTML can run its inline
+        {/* sandbox without allow-same-origin: archived HTML runs its inline
             scripts but can never reach the app's cookies or DOM */}
-        <iframe
-          key={selected.id}
-          sandbox="allow-scripts"
-          src={`/api/view/${selected.id}`}
-          title={`${selected.title} (v${selected.number})`}
-          className="h-[80vh] w-full rounded-md border border-zinc-200 bg-white dark:border-zinc-800"
-        />
+        <div className="plate min-w-0 flex-1">
+          <iframe
+            key={selected.id}
+            sandbox="allow-scripts"
+            src={`/api/view/${selected.id}`}
+            title={`${selected.title} (v${selected.number})`}
+            className="block h-[80vh] w-full"
+          />
+        </div>
       </div>
     </div>
   );

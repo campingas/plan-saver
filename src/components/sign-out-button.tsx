@@ -8,7 +8,7 @@ export function SignOutButton() {
   return (
     <button
       onClick={() => authClient.signOut().then(() => router.push("/login"))}
-      className="text-sm text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+      className="nav-cell cursor-pointer hover:!text-stamp"
     >
       Sign out
     </button>

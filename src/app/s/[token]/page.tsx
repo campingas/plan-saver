@@ -2,6 +2,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
 import { document, shareLink, version } from "@/db/schema";
+import { KindBadge } from "@/components/kind-badge";
 
 export default async function SharedVersionPage({
   params,
@@ -25,19 +26,23 @@ export default async function SharedVersionPage({
   if (!row) notFound();
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-4 px-6 py-8">
+    <div className="reveal mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-6 py-10">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">{row.title}</h1>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
-          Shared {row.kind} · v{row.number} · Plan-Saver
-        </p>
+        <p className="eyebrow mb-1.5">Plan-Saver · shared document</p>
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="display text-[30px]">{row.title}</h1>
+          <KindBadge kind={row.kind} />
+          <span className="stamp text-muted">rev v{row.number}</span>
+        </div>
       </div>
-      <iframe
-        sandbox="allow-scripts"
-        src={`/api/view/${row.versionId}?share=${encodeURIComponent(token)}`}
-        title={`${row.title} (v${row.number})`}
-        className="h-[85vh] w-full rounded-md border border-zinc-200 bg-white dark:border-zinc-800"
-      />
+      <div className="plate min-h-0 flex-1">
+        <iframe
+          sandbox="allow-scripts"
+          src={`/api/view/${row.versionId}?share=${encodeURIComponent(token)}`}
+          title={`${row.title} (v${row.number})`}
+          className="block h-[85vh] w-full"
+        />
+      </div>
     </div>
   );
 }

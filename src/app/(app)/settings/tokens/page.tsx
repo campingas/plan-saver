@@ -15,51 +15,59 @@ export default async function TokensPage() {
     .where(eq(apiToken.userId, session.user.id))
     .orderBy(desc(apiToken.createdAt));
 
-  const base = process.env.BETTER_AUTH_URL ?? "https://your-deployment.vercel.app";
+  const base = process.env.BETTER_AUTH_URL ?? "https://plan-saver.vercel.app";
 
   return (
     <div className="max-w-2xl space-y-8">
-      <div className="space-y-1">
-        <h1 className="text-xl font-semibold tracking-tight">API tokens</h1>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
-          Personal tokens let the html-planning skill upload documents to your archive. Tokens are
-          stored hashed and shown only once at creation.
+      <div className="space-y-2">
+        <h1 className="display text-[34px]">API tokens</h1>
+        <p className="text-sm text-muted">
+          A token lets the html-planning skill file documents into this archive. Tokens are stored
+          hashed and shown once, at creation.
         </p>
       </div>
 
       <CreateTokenForm />
 
       {tokens.length > 0 && (
-        <ul className="divide-y divide-zinc-200 rounded-md border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
+        <div className="border border-line-strong bg-panel">
+          <div className="grid grid-cols-[1fr_auto] items-baseline gap-x-6 border-b border-line-strong px-5 py-2.5 sm:grid-cols-[1fr_auto_auto]">
+            <span className="eyebrow">Token</span>
+            <span className="eyebrow hidden text-right sm:block">Last used</span>
+            <span className="eyebrow text-right">Status</span>
+          </div>
           {tokens.map((t) => (
-            <li key={t.id} className="flex items-center justify-between px-4 py-3">
+            <div
+              key={t.id}
+              className="grid grid-cols-[1fr_auto] items-center gap-x-6 border-b border-line px-5 py-3.5 last:border-b-0 sm:grid-cols-[1fr_auto_auto]"
+            >
               <div>
-                <span className={`font-medium ${t.revokedAt ? "text-zinc-400 line-through dark:text-zinc-600" : ""}`}>
+                <span className={`font-medium ${t.revokedAt ? "text-muted line-through" : "text-ink"}`}>
                   {t.name}
                 </span>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                  created {formatDate(t.createdAt)} · last used {formatDate(t.lastUsedAt)}
-                  {t.revokedAt && ` · revoked ${formatDate(t.revokedAt)}`}
-                </p>
+                <p className="font-mono text-xs text-muted">created {formatDate(t.createdAt)}</p>
               </div>
-              {!t.revokedAt && (
-                <form action={revokeApiToken.bind(null, t.id)}>
-                  <button className="text-sm text-red-600 hover:underline dark:text-red-400">
+              <span className="hidden font-mono text-sm text-muted sm:block">
+                {formatDate(t.lastUsedAt)}
+              </span>
+              {t.revokedAt ? (
+                <span className="stamp text-muted">revoked</span>
+              ) : (
+                <form action={revokeApiToken.bind(null, t.id)} className="text-right">
+                  <button className="stamp cursor-pointer text-stamp hover:bg-stamp hover:text-paper transition-colors">
                     Revoke
                   </button>
                 </form>
               )}
-            </li>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
 
       <section className="space-y-2">
-        <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Machine setup</h2>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
-          Save your token where the skill reads it:
-        </p>
-        <pre className="overflow-x-auto rounded-md border border-zinc-200 bg-zinc-50 p-3 text-xs dark:border-zinc-800 dark:bg-zinc-900">
+        <h2 className="eyebrow">Machine setup</h2>
+        <p className="text-sm text-muted">Save the token where the skill reads it:</p>
+        <pre className="overflow-x-auto border border-line bg-panel-2 p-4 font-mono text-xs leading-relaxed text-ink">
           {`mkdir -p ~/.config/plan-saver
 cat > ~/.config/plan-saver/config.json <<'EOF'
 {

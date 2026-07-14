@@ -37,31 +37,40 @@ export default async function ProjectPage({
     .orderBy(desc(document.updatedAt));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div>
-        <Link href="/" className="text-sm text-zinc-500 hover:underline dark:text-zinc-400">
-          ← Projects
+        <Link href="/" className="eyebrow hover:text-accent transition-colors">
+          ← Project index
         </Link>
-        <h1 className="mt-1 text-xl font-semibold tracking-tight">{proj.displayName}</h1>
+        <h1 className="display mt-2 text-[34px]">{proj.displayName}</h1>
       </div>
-      <ul className="divide-y divide-zinc-200 rounded-md border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
+
+      <div className="border border-line-strong bg-panel">
+        <div className="grid grid-cols-[auto_1fr_auto_auto] items-baseline gap-x-6 border-b border-line-strong px-5 py-2.5">
+          <span className="eyebrow w-16">Kind</span>
+          <span className="eyebrow">Document</span>
+          <span className="eyebrow text-right">Rev</span>
+          <span className="eyebrow hidden text-right sm:block">Updated</span>
+        </div>
         {documents.map((d) => (
-          <li key={`${d.slug}-${d.kind}`}>
-            <Link
-              href={`/p/${proj.slug}/${d.slug}${d.kind === "report" ? "?kind=report" : ""}`}
-              className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-900"
-            >
-              <span className="flex items-center gap-2">
-                <KindBadge kind={d.kind} />
-                <span className="font-medium">{d.title}</span>
-              </span>
-              <span className="shrink-0 text-sm text-zinc-500 dark:text-zinc-400">
-                v{d.versionCount} · {formatDate(d.updatedAt)}
-              </span>
-            </Link>
-          </li>
+          <Link
+            key={`${d.slug}-${d.kind}`}
+            href={`/p/${proj.slug}/${d.slug}${d.kind === "report" ? "?kind=report" : ""}`}
+            className="group grid grid-cols-[auto_1fr_auto_auto] items-center gap-x-6 border-b border-line px-5 py-3.5 transition-colors last:border-b-0 hover:bg-panel-2"
+          >
+            <span className="w-16">
+              <KindBadge kind={d.kind} />
+            </span>
+            <span className="font-medium text-ink group-hover:text-accent transition-colors">
+              {d.title}
+            </span>
+            <span className="font-mono text-sm text-muted tabular-nums">v{d.versionCount}</span>
+            <span className="hidden font-mono text-sm text-muted sm:block">
+              {formatDate(d.updatedAt)}
+            </span>
+          </Link>
         ))}
-      </ul>
+      </div>
     </div>
   );
 }

@@ -6,26 +6,33 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const session = await requireSession();
   return (
     <>
-      <header className="border-b border-zinc-200 dark:border-zinc-800">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-3">
-          <nav className="flex items-center gap-6">
-            <Link href="/" className="text-sm font-semibold tracking-tight">
-              Plan-Saver
-            </Link>
-            <Link
-              href="/settings/tokens"
-              className="text-sm text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-            >
+      <header className="mx-auto w-full max-w-5xl px-6 pt-8">
+        <div className="flex items-stretch border border-line-strong bg-panel">
+          <Link
+            href="/"
+            className="display px-5 py-2.5 text-[26px] text-ink hover:text-accent transition-colors"
+          >
+            Plan-Saver
+          </Link>
+          <div className="eyebrow hidden items-center border-l border-line px-4 md:flex">
+            Controlled archive for agents
+          </div>
+          <nav className="ml-auto flex items-stretch">
+            <Link href="/settings/tokens" className="nav-cell">
               API tokens
             </Link>
-          </nav>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-zinc-500 dark:text-zinc-400">{session.user.email}</span>
+            <span
+              tabIndex={0}
+              className="email-veil nav-cell hidden !text-muted sm:flex"
+              style={{ textTransform: "none", letterSpacing: 0 }}
+            >
+              {session.user.email}
+            </span>
             <SignOutButton />
-          </div>
+          </nav>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-8">{children}</main>
+      <main className="reveal mx-auto w-full max-w-5xl flex-1 px-6 py-10">{children}</main>
     </>
   );
 }
