@@ -7,6 +7,7 @@ import {
 } from "@/db/queries";
 import { highlightDocumentHtml } from "@/lib/document-highlighting";
 import { displayAgentName } from "@/lib/agent";
+import { htmlToMarkdown } from "@/lib/html-to-markdown";
 
 const CSP = [
   "default-src 'none'",
@@ -38,15 +39,24 @@ export async function resolveViewerContent(input: {
   return html === null ? null : { ...authorized, agent: displayAgentName(authorized.agent), html };
 }
 
+export type ViewerMode = "display" | "html" | "markdown";
+
+export function viewerModeFromDownload(download: string | null): ViewerMode {
+  if (download === "1") return "html";
+  if (download === "markdown") return "markdown";
+  return "display";
+}
+
 export function viewerResponse(
   content: { number: number; slug: string; agent?: string | null; html: string } | null,
-  download: boolean,
+  mode: ViewerMode,
 ): Response {
   if (!content) {
     return Response.json({ error: "not found" }, { status: 404 });
   }
   const headers: Record<string, string> = {
-    "Content-Type": "text/html; charset=utf-8",
+    "Content-Type":
+      mode === "markdown" ? "text/markdown; charset=utf-8" : "text/html; charset=utf-8",
     "Content-Security-Policy": CSP,
     "X-Robots-Tag": "noindex",
     "X-Content-Type-Options": "nosniff",
@@ -56,11 +66,17 @@ export function viewerResponse(
     "Cross-Origin-Resource-Policy": "same-origin",
     "Cache-Control": "private, no-store",
   };
-  if (download) {
+  if (mode === "html") {
     headers["Content-Disposition"] = `attachment; filename="${content.slug}-v${content.number}.html"`;
+  } else if (mode === "markdown") {
+    headers["Content-Disposition"] = `attachment; filename="${content.slug}-v${content.number}.md"`;
   }
   return new Response(
-    download ? content.html : highlightDocumentHtml(content.html, content.agent ?? null),
+    mode === "html"
+      ? content.html
+      : mode === "markdown"
+        ? htmlToMarkdown(content.html)
+        : highlightDocumentHtml(content.html, content.agent ?? null),
     { headers },
   );
 }

@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { getSessionFromHeaders } from "@/lib/session";
 import { logServerEvent } from "@/lib/log";
-import { resolveViewerContent, viewerResponse } from "@/lib/viewer";
+import { resolveViewerContent, viewerModeFromDownload, viewerResponse } from "@/lib/viewer";
 
 // Archived documents are self-contained HTML that runs its own inline scripts
 // (syntax highlighting), so they are served from this dedicated route and only
@@ -21,7 +21,8 @@ export async function GET(
     shareToken: share ?? undefined,
     userId: session?.user.id,
   });
-  const response = viewerResponse(content, req.nextUrl.searchParams.get("download") === "1");
+  const mode = viewerModeFromDownload(req.nextUrl.searchParams.get("download"));
+  const response = viewerResponse(content, mode);
   logServerEvent({
     event: "viewer",
     outcome: response.ok ? "ok" : "not_found",

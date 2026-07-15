@@ -23,6 +23,20 @@ export default async function SharedVersionPage({ params }: { params: Params }) 
           <span className="stamp text-muted">rev v{row.number}</span>
         </div>
       </div>
+      <div className="flex flex-wrap gap-x-6 gap-y-2">
+        <a
+          href={`/api/view/${row.versionId}?share=${encodeURIComponent(token)}&download=1`}
+          className="eyebrow hover:text-accent transition-colors"
+        >
+          ↓ Download raw HTML
+        </a>
+        <a
+          href={`/api/view/${row.versionId}?share=${encodeURIComponent(token)}&download=markdown`}
+          className="eyebrow hover:text-accent transition-colors"
+        >
+          ↓ Download raw Markdown
+        </a>
+      </div>
       <div className="plate min-h-0 flex-1">
         <iframe
           sandbox="allow-scripts"

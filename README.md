@@ -15,7 +15,7 @@ Next.js (App Router) on Vercel, Supabase Postgres via Drizzle ORM (postgres-js o
 
 Confirm the `DIRECT_URL` target before migrating, and do not apply migrations to a remote database without explicit approval.
 
-Sign-in is restricted to the emails in `ALLOWED_EMAILS`, including sessions created before an allowlist change. Projects own documents, and every authenticated read and mutation derives document ownership through the project. Owners can delete a single version, a whole document, or an entire project; deletes cascade to child rows, deleting the last version also removes its document, and project deletion requires typing the project slug.
+Sign-in is restricted to the emails in `ALLOWED_EMAILS`, including sessions created before an allowlist change. Projects own documents, and every authenticated read and mutation derives document ownership through the project. Owners can download each revision as its unchanged raw HTML or as derived GitHub-Flavored Markdown. Shared revision pages expose the same two downloads without requiring sign-in while their secret link remains active. Owners can delete a single version, a whole document, or an entire project; deletes cascade to child rows, deleting the last version also removes its document, and project deletion requires typing the project slug.
 
 Run `bun run test` for the native Bun suite. It starts and removes a disposable `postgres:17-alpine` container by default, or destructively resets the dedicated database named by `TEST_DATABASE_URL` when its database name contains `test`.
 
@@ -46,6 +46,6 @@ The skill reads `~/.config/plan-saver/config.json` (`{ "url": ..., "token": ... 
 
 ## Security model
 
-Stored documents are executable HTML, so they are authorized before their content is read, served only from `/api/view/[versionId]` with restrictive security headers, and embedded via `<iframe sandbox="allow-scripts">` without `allow-same-origin`. Archived scripts can never reach the app's cookies or DOM. Display responses apply local syntax highlighting and safe per-revision agent footer attribution without permitting CDN resources, while raw HTML downloads remain unchanged. API, share, and Better Auth magic-link tokens are hashed at rest and shown only when issued. Better Auth uses database-backed rate limiting, seven-day sessions refreshed daily, and five-minute magic links.
+Stored documents are executable HTML, so they are authorized before their content is read, served only from `/api/view/[versionId]` with restrictive security headers, and embedded via `<iframe sandbox="allow-scripts">` without `allow-same-origin`. Archived scripts can never reach the app's cookies or DOM. Display responses apply local syntax highlighting and safe per-revision agent footer attribution without permitting CDN resources, raw HTML downloads remain unchanged, and derived Markdown downloads omit executable elements and unsafe link targets. API, share, and Better Auth magic-link tokens are hashed at rest and shown only when issued. Better Auth uses database-backed rate limiting, seven-day sessions refreshed daily, and five-minute magic links.
 
 Production migration windows follow [`docs/maintenance-window.md`](docs/maintenance-window.md); reading that runbook does not authorize its remote steps.

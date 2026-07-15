@@ -30,7 +30,8 @@ import { highlightDocumentHtml } from "@/lib/document-highlighting";
 import { MAX_HIGHLIGHT_CHARS } from "@/lib/code-highlighting";
 import { machineSetupCommand, TOKEN_PLACEHOLDER } from "@/lib/machine-setup";
 import { MAX_AGENT_NAME_LENGTH, UNKNOWN_AGENT } from "@/lib/agent";
-import { resolveViewerContent, viewerResponse } from "@/lib/viewer";
+import { htmlToMarkdown } from "@/lib/html-to-markdown";
+import { resolveViewerContent, viewerModeFromDownload, viewerResponse } from "@/lib/viewer";
 import {
   MAX_BODY_BYTES,
   MAX_HTML_BYTES,
@@ -352,8 +353,8 @@ describe("viewer", () => {
 
   test("highlights display HTML while preserving raw downloads and security headers", async () => {
     const html = '<!doctype html><html><head></head><body><pre><code class="language-typescript">const value = 1;</code></pre></body></html>';
-    const display = viewerResponse({ number: 3, slug: "safe-name", agent: "Codex", html }, false);
-    const response = viewerResponse({ number: 3, slug: "safe-name", agent: "Codex", html }, true);
+    const display = viewerResponse({ number: 3, slug: "safe-name", agent: "Codex", html }, "display");
+    const response = viewerResponse({ number: 3, slug: "safe-name", agent: "Codex", html }, "html");
     const displayHtml = await display.text();
 
     expect(displayHtml).toContain('class="language-typescript hljs"');
@@ -367,7 +368,58 @@ describe("viewer", () => {
     expect(response.headers.get("cache-control")).toBe("private, no-store");
     expect(response.headers.get("x-content-type-options")).toBe("nosniff");
     expect(response.headers.get("content-disposition")).toBe('attachment; filename="safe-name-v3.html"');
-    expect(viewerResponse(null, false).status).toBe(404);
+    expect(viewerResponse(null, "display").status).toBe(404);
+  });
+
+  test("derives safe GitHub-Flavored Markdown with fenced language code", () => {
+    const html = `<!doctype html>
+      <html>
+        <head><style>body { color: red; }</style><script>headScript()</script></head>
+        <body>
+          <h1>Export</h1>
+          <p><a href="https://example.com/docs">Safe</a> and <a href="java&#x0a;script:alert(1)">unsafe</a>.</p>
+          <table><thead><tr><th>Name</th><th>Value</th></tr></thead><tbody><tr><td>Agent</td><td>Codex</td></tr></tbody></table>
+          <ul><li><input type="checkbox" checked>Done</li></ul>
+          <p><del>Old</del></p>
+          <pre><code class="language-typescript">const value = 1;</code></pre>
+          <img alt="Unsafe image" src="data:text/html;base64,PHNjcmlwdD4=">
+          <script>bodyScript()</script>
+        </body>
+      </html>`;
+
+    const markdown = htmlToMarkdown(html);
+
+    expect(markdown).toContain("# Export");
+    expect(markdown).toContain("[Safe](https://example.com/docs)");
+    expect(markdown).toContain("and unsafe.");
+    expect(markdown).not.toContain("javascript:");
+    expect(markdown).toContain("| Name");
+    expect(markdown).toContain("| Agent");
+    expect(markdown).toContain("[x] Done");
+    expect(markdown).toContain("~~Old~~");
+    expect(markdown).toContain("```typescript\nconst value = 1;\n```");
+    expect(markdown).toContain("Unsafe image");
+    expect(markdown).not.toContain("data:text/html");
+    expect(markdown).not.toContain("headScript");
+    expect(markdown).not.toContain("bodyScript");
+    expect(markdown.endsWith("\n")).toBeTrue();
+    expect(markdown.endsWith("\n\n")).toBeFalse();
+  });
+
+  test("serves Markdown attachments and maps download modes without changing display defaults", async () => {
+    const html = "<h1>Export</h1><p>Body</p>";
+    const response = viewerResponse({ number: 4, slug: "safe-name", html }, "markdown");
+
+    expect(await response.text()).toBe("# Export\n\nBody\n");
+    expect(response.headers.get("content-type")).toBe("text/markdown; charset=utf-8");
+    expect(response.headers.get("content-disposition")).toBe('attachment; filename="safe-name-v4.md"');
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+    expect(response.headers.get("x-content-type-options")).toBe("nosniff");
+    expect(response.headers.get("content-security-policy")).toContain("default-src 'none'");
+    expect(viewerModeFromDownload("1")).toBe("html");
+    expect(viewerModeFromDownload("markdown")).toBe("markdown");
+    expect(viewerModeFromDownload(null)).toBe("display");
+    expect(viewerModeFromDownload("unknown")).toBe("display");
   });
 });
 
