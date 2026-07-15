@@ -1,73 +1,17 @@
-"use client";
-
+import type { Metadata } from "next";
 import Image from "next/image";
-import { FormEvent, useState } from "react";
 import { CopySnippet } from "@/components/copy-snippet";
-import { authClient } from "@/lib/auth-client";
+import { LoginForm } from "@/components/login-form";
 
-function LoginCard() {
-  const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
-  const [error, setError] = useState<string | null>(null);
+export const metadata: Metadata = { title: "Sign in" };
 
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault();
-    setStatus("sending");
-    setError(null);
-    const { error } = await authClient.signIn.magicLink({ email, callbackURL: "/" });
-    if (error) {
-      setStatus("error");
-      setError(error.message ?? "The sign-in link could not be sent. Try again.");
-    } else {
-      setStatus("sent");
-    }
-  }
+const INSTALL_COMMAND = "bunx skills add campingas/dotfiles --skill html-planning";
 
-  return (
-    <div className="relative w-full max-w-sm">
-      <Image
-        src="/mascot-cut.png"
-        alt="The campingas mascot popping out of the sign-in box"
-        width={180}
-        height={243}
-        className="absolute -top-[150px] right-5 z-0 -rotate-2"
-        priority
-      />
-      <div className="plate relative z-10 w-full p-8">
-      <p className="eyebrow mb-1.5">Sign in</p>
-      <h2 className="display mb-6 text-[30px]">Your archive</h2>
-      {status === "sent" ? (
-        <div className="border border-accent bg-panel p-4">
-          <p className="eyebrow mb-1 !text-accent">Link sent</p>
-          <p className="text-sm text-muted">Check {email} for a sign-in link. It expires shortly.</p>
-        </div>
-      ) : (
-        <form onSubmit={onSubmit} className="space-y-3">
-          <label className="eyebrow block" htmlFor="email">
-            Registered email
-          </label>
-          <input
-            id="email"
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
-            className="field"
-          />
-          <button type="submit" disabled={status === "sending"} className="btn btn-primary w-full">
-            {status === "sending" ? "Sending…" : "Send sign-in link"}
-          </button>
-          {error && <p className="text-sm text-stamp">{error}</p>}
-        </form>
-      )}
-        <p className="mt-6 font-mono text-[10px] uppercase tracking-[0.14em] text-muted/70">
-          Access restricted to listed emails
-        </p>
-      </div>
-    </div>
-  );
-}
+const HOW_IT_WORKS = [
+  ["01", "Generate", "The agent plans or reports; the skill renders it as one HTML file."],
+  ["02", "Archive", "The file is posted with your token and filed under project / document / revision."],
+  ["03", "Read & share", "Browse the register, compare revisions, issue share links."],
+] as const;
 
 export default function LoginPage() {
   return (
@@ -75,10 +19,27 @@ export default function LoginPage() {
       {/* login: sticky right rail on desktop, first on mobile */}
       <aside className="flex items-center justify-center border-b border-line px-6 py-14 lg:sticky lg:top-0 lg:h-screen lg:w-[35%] lg:border-b-0 lg:border-l lg:py-0">
         <div className="w-full max-w-sm space-y-8">
-          <LoginCard />
+          <div className="relative">
+            <Image
+              src="/mascot-cut.png"
+              alt="The campingas mascot popping out of the sign-in box"
+              width={180}
+              height={243}
+              className="absolute -top-[150px] right-5 z-0 -rotate-2"
+              preload
+            />
+            <div className="plate relative z-10 w-full p-8">
+              <p className="eyebrow mb-1.5">Sign in</p>
+              <h2 className="display mb-6 text-[30px]">Your archive</h2>
+              <LoginForm />
+              <p className="mt-6 font-mono text-[10px] uppercase tracking-[0.14em] text-muted/70">
+                Access restricted to listed emails
+              </p>
+            </div>
+          </div>
           <div className="space-y-3">
             <h2 className="eyebrow">Install the skill</h2>
-            <CopySnippet command="npx skills add campingas/dotfiles --skill html-planning" />
+            <CopySnippet command={INSTALL_COMMAND} />
             <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted/70">
               Works with Claude Code, Codex and 70+ agents · auto-archiving activates once an API
               token is saved in ~/.config/plan-saver/config.json
@@ -118,11 +79,7 @@ export default function LoginPage() {
 
           <div className="border border-line-strong bg-panel">
             <h2 className="eyebrow border-b border-line-strong px-5 py-2.5">How it works</h2>
-            {[
-              ["01", "Generate", "The agent plans or reports; the skill renders it as one HTML file."],
-              ["02", "Archive", "The file is posted with your token and filed under project / document / revision."],
-              ["03", "Read & share", "Browse the register, compare revisions, issue share links."],
-            ].map(([n, lead, text]) => (
+            {HOW_IT_WORKS.map(([n, lead, text]) => (
               <div
                 key={n}
                 className="grid grid-cols-[auto_auto_1fr] items-baseline gap-x-5 border-b border-line px-5 py-3.5 last:border-b-0"
@@ -144,6 +101,7 @@ export default function LoginPage() {
               <div className="plate">
                 <iframe
                   sandbox=""
+                  loading="lazy"
                   src="/examples/plan-example.html"
                   title="Example plan document"
                   className="block h-[420px] w-full"
@@ -158,6 +116,7 @@ export default function LoginPage() {
               <div className="plate">
                 <iframe
                   sandbox=""
+                  loading="lazy"
                   src="/examples/report-example.html"
                   title="Example report document"
                   className="block h-[420px] w-full"

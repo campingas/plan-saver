@@ -8,6 +8,27 @@
       "when": 1784042453914,
       "tag": "0000_late_moonstone",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1784062489564,
+      "tag": "0001_misty_squadron_sinister",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784069131419,
+      "tag": "0002_magenta_lethal_legion",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1784072267571,
+      "tag": "0003_share_token_hash_and_rate_limit",
+      "breakpoints": true
     }
   ]
 }

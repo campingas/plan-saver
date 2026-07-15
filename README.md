@@ -8,12 +8,16 @@ Next.js (App Router) on Vercel, Supabase Postgres via Drizzle ORM (postgres-js o
 
 ## Setup
 
-1. Copy `.env.example` to `.env` and fill in `DATABASE_URL` (Supabase transaction pooler, port 6543), `DIRECT_URL` (session pooler, port 5432, used by migrations), `BETTER_AUTH_SECRET` (`openssl rand -base64 32`), `BETTER_AUTH_URL`, `RESEND_API_KEY`, and `ALLOWED_EMAILS`.
+1. Copy `.env.example` to `.env` and fill in `DATABASE_URL` (Supabase transaction pooler, port 6543), `DIRECT_URL` (session pooler, port 5432, required for migrations), `BETTER_AUTH_SECRET` (`openssl rand -base64 32`), `BETTER_AUTH_URL`, `RESEND_API_KEY`, and `ALLOWED_EMAILS`.
 2. `bun install`
 3. `bun run db:migrate` to apply migrations to the database.
 4. `bun run dev`
 
-Sign-in is restricted to the emails in `ALLOWED_EMAILS`. Every table carries `user_id`, so widening access later only means changing that variable.
+Confirm the `DIRECT_URL` target before migrating, and do not apply migrations to a remote database without explicit approval.
+
+Sign-in is restricted to the emails in `ALLOWED_EMAILS`, including sessions created before an allowlist change. Projects own documents, and every authenticated read and mutation derives document ownership through the project.
+
+Run `bun run test` for the native Bun suite. It starts and removes a disposable `postgres:17-alpine` container by default, or destructively resets the dedicated database named by `TEST_DATABASE_URL` when its database name contains `test`.
 
 ## Ingest API
 
@@ -34,10 +38,12 @@ Content-Type: application/json
 }
 ```
 
-Returns `201 { "url": ..., "version": n }`. Re-posting the same `(project, slug, kind)` appends the next version. HTML is capped at 2 MB. Invalid or revoked tokens get `401`.
+Returns `201 { "url": ..., "version": n }`, with the allocated revision included as `v=n` in the URL. Re-posting the same `(project, slug, kind)` atomically appends the next version. Raw JSON request bodies are capped at 8 MiB before parsing, HTML is capped at 2 MiB of UTF-8 data, and serialized `meta` is capped at 64 KiB. Invalid or revoked tokens get `401`.
 
 The skill reads `~/.config/plan-saver/config.json` (`{ "url": ..., "token": ... }`) and uploads silently after writing a plan, degrading to local-only when the config or network is missing.
 
 ## Security model
 
-Stored documents are executable HTML, so they are served only from `/api/view/[versionId]` (session- or share-token-authorized, strict CSP) and embedded via `<iframe sandbox="allow-scripts">` without `allow-same-origin`. Archived scripts can never reach the app's cookies or DOM. API tokens are sha256-hashed at rest and shown once. Share links are 32-byte random tokens, revocable, and only ever expose a single version.
+Stored documents are executable HTML, so they are authorized before their content is read, served only from `/api/view/[versionId]` with restrictive security headers, and embedded via `<iframe sandbox="allow-scripts">` without `allow-same-origin`. Archived scripts can never reach the app's cookies or DOM. API, share, and Better Auth magic-link tokens are hashed at rest and shown only when issued. Better Auth uses database-backed rate limiting, seven-day sessions refreshed daily, and five-minute magic links.
+
+Production migration windows follow [`docs/maintenance-window.md`](docs/maintenance-window.md); reading that runbook does not authorize its remote steps.

@@ -21,11 +21,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <Link href="/settings/tokens" className="nav-cell">
               API tokens
             </Link>
-            <span
-              tabIndex={0}
-              className="email-veil nav-cell hidden !text-muted sm:flex"
-              style={{ textTransform: "none", letterSpacing: 0 }}
-            >
+            <span tabIndex={0} className="email-veil nav-cell nav-cell-plain hidden sm:flex">
               {session.user.email}
             </span>
             <SignOutButton />

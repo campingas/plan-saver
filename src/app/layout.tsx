@@ -6,6 +6,7 @@ const display = Big_Shoulders({
   variable: "--font-big-shoulders",
   subsets: ["latin"],
   weight: ["600", "700"],
+  adjustFontFallback: false,
 });
 
 const sans = IBM_Plex_Sans({
@@ -21,7 +22,7 @@ const mono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Plan-Saver",
+  title: { default: "Plan-Saver", template: "%s · Plan-Saver" },
   description: "A controlled archive for HTML plans and reports",
 };
 

@@ -1,28 +1,16 @@
-import { and, eq, isNull } from "drizzle-orm";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { db } from "@/db";
-import { document, shareLink, version } from "@/db/schema";
+import { getSharedVersion } from "@/db/queries";
 import { KindBadge } from "@/components/kind-badge";
 
-export default async function SharedVersionPage({
-  params,
-}: {
-  params: Promise<{ token: string }>;
-}) {
+type Params = Promise<{ token: string }>;
+
+export const metadata: Metadata = { title: "Shared document" };
+
+export default async function SharedVersionPage({ params }: { params: Params }) {
   const { token } = await params;
 
-  const [row] = await db
-    .select({
-      versionId: version.id,
-      number: version.number,
-      title: version.title,
-      kind: document.kind,
-    })
-    .from(shareLink)
-    .innerJoin(version, eq(shareLink.versionId, version.id))
-    .innerJoin(document, eq(version.documentId, document.id))
-    .where(and(eq(shareLink.token, token), isNull(shareLink.revokedAt)))
-    .limit(1);
+  const row = await getSharedVersion(token);
   if (!row) notFound();
 
   return (

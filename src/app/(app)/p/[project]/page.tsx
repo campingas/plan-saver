@@ -1,40 +1,24 @@
-import { and, count, desc, eq } from "drizzle-orm";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { db } from "@/db";
-import { document, project, version } from "@/db/schema";
+import { getProjectForUser, listProjectDocuments } from "@/db/queries";
 import { KindBadge } from "@/components/kind-badge";
 import { formatDate } from "@/lib/format";
 import { requireSession } from "@/lib/session";
+import { documentPath } from "@/lib/urls";
 
-export default async function ProjectPage({
-  params,
-}: {
-  params: Promise<{ project: string }>;
-}) {
+type Params = Promise<{ project: string }>;
+
+export const metadata: Metadata = { title: "Project" };
+
+export default async function ProjectPage({ params }: { params: Params }) {
   const session = await requireSession();
   const { project: projectSlug } = await params;
 
-  const [proj] = await db
-    .select()
-    .from(project)
-    .where(and(eq(project.userId, session.user.id), eq(project.slug, projectSlug)))
-    .limit(1);
+  const proj = await getProjectForUser(session.user.id, projectSlug);
   if (!proj) notFound();
 
-  const documents = await db
-    .select({
-      slug: document.slug,
-      kind: document.kind,
-      title: document.title,
-      updatedAt: document.updatedAt,
-      versionCount: count(version.id),
-    })
-    .from(document)
-    .leftJoin(version, eq(version.documentId, document.id))
-    .where(eq(document.projectId, proj.id))
-    .groupBy(document.id)
-    .orderBy(desc(document.updatedAt));
+  const documents = await listProjectDocuments(session.user.id, proj.id);
 
   return (
     <div className="space-y-5">
@@ -55,7 +39,7 @@ export default async function ProjectPage({
         {documents.map((d) => (
           <Link
             key={`${d.slug}-${d.kind}`}
-            href={`/p/${proj.slug}/${d.slug}${d.kind === "report" ? "?kind=report" : ""}`}
+            href={documentPath(proj.slug, d.slug, d.kind)}
             className="group grid grid-cols-[auto_1fr_auto_auto] items-center gap-x-6 border-b border-line px-5 py-3.5 transition-colors last:border-b-0 hover:bg-panel-2"
           >
             <span className="w-16">

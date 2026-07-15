@@ -1,58 +1,55 @@
-import { and, asc, desc, eq, isNull } from "drizzle-orm";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { db } from "@/db";
-import { document, project, shareLink, version } from "@/db/schema";
+import {
+  findDocument,
+  getProjectForUser,
+  listActiveShareLinks,
+  listVersions,
+} from "@/db/queries";
 import { KindBadge } from "@/components/kind-badge";
-import { createShareLink, revokeShareLink } from "@/lib/actions";
+import { CreateShareLinkForm } from "@/components/create-share-link-form";
+import { revokeShareLink } from "@/lib/actions";
 import { formatDate } from "@/lib/format";
 import { requireSession } from "@/lib/session";
+import { documentPath } from "@/lib/urls";
+
+type Params = Promise<{ project: string; slug: string }>;
+type SearchParams = Promise<{ v?: string; kind?: string }>;
+
+function preferredKind(kind: string | undefined) {
+  return kind === "report" ? ("report" as const) : ("plan" as const);
+}
+
+async function loadDocument(params: Params, searchParams: SearchParams) {
+  const session = await requireSession();
+  const { project: projectSlug, slug } = await params;
+  const { v, kind } = await searchParams;
+
+  const proj = await getProjectForUser(session.user.id, projectSlug);
+  if (!proj) return null;
+  const doc = await findDocument(session.user.id, proj.id, slug, preferredKind(kind));
+  if (!doc) return null;
+  const versions = await listVersions(session.user.id, doc.id);
+  if (versions.length === 0) return null;
+  const selected = versions.find((x) => String(x.number) === v) ?? versions[0];
+  return { userId: session.user.id, proj, doc, versions, selected };
+}
+
+export const metadata: Metadata = { title: "Document" };
 
 export default async function DocumentPage({
   params,
   searchParams,
 }: {
-  params: Promise<{ project: string; slug: string }>;
-  searchParams: Promise<{ v?: string; kind?: string }>;
+  params: Params;
+  searchParams: SearchParams;
 }) {
-  const session = await requireSession();
-  const { project: projectSlug, slug } = await params;
-  const { v, kind } = await searchParams;
+  const loaded = await loadDocument(params, searchParams);
+  if (!loaded) notFound();
+  const { userId, proj, doc, versions, selected } = loaded;
 
-  const [proj] = await db
-    .select()
-    .from(project)
-    .where(and(eq(project.userId, session.user.id), eq(project.slug, projectSlug)))
-    .limit(1);
-  if (!proj) notFound();
-
-  const docs = await db
-    .select()
-    .from(document)
-    .where(and(eq(document.projectId, proj.id), eq(document.slug, slug)))
-    .orderBy(asc(document.kind));
-  // (projectId, slug, kind) is unique, so at most one plan and one report share a slug
-  const doc = docs.find((d) => d.kind === (kind === "report" ? "report" : "plan")) ?? docs[0];
-  if (!doc) notFound();
-
-  const versions = await db
-    .select({ id: version.id, number: version.number, title: version.title, createdAt: version.createdAt })
-    .from(version)
-    .where(eq(version.documentId, doc.id))
-    .orderBy(desc(version.number));
-  if (versions.length === 0) notFound();
-
-  const selected = versions.find((x) => String(x.number) === v) ?? versions[0];
-
-  const shares = await db
-    .select({ id: shareLink.id, token: shareLink.token, createdAt: shareLink.createdAt })
-    .from(shareLink)
-    .where(and(eq(shareLink.versionId, selected.id), isNull(shareLink.revokedAt)))
-    .orderBy(desc(shareLink.createdAt));
-
-  const base = process.env.BETTER_AUTH_URL ?? "";
-  const versionHref = (n: number) =>
-    `/p/${proj.slug}/${doc.slug}?${doc.kind === "report" ? "kind=report&" : ""}v=${n}`;
+  const shares = await listActiveShareLinks(userId, selected.id);
 
   return (
     <div className="space-y-6">
@@ -78,7 +75,7 @@ export default async function DocumentPage({
               {versions.map((x) => (
                 <li key={x.id} className="border-b border-line last:border-b-0">
                   <Link
-                    href={versionHref(x.number)}
+                    href={documentPath(proj.slug, doc.slug, doc.kind, x.number)}
                     className={`flex items-baseline justify-between px-4 py-2.5 font-mono text-sm transition-colors ${
                       x.id === selected.id
                         ? "border-l-2 border-accent bg-panel-2 text-ink"
@@ -99,15 +96,13 @@ export default async function DocumentPage({
             </h2>
             <div className="space-y-3 p-4">
               {shares.length === 0 && (
-                <p className="text-xs text-muted">None issued. A share link opens this revision without signing in.</p>
+                <p className="text-xs text-muted">
+                  None issued. A share link opens this revision without signing in.
+                </p>
               )}
               {shares.map((s) => (
                 <div key={s.id} className="space-y-1.5 border border-line bg-panel-2 p-2.5">
-                  <input
-                    readOnly
-                    value={`${base}/s/${s.token}`}
-                    className="w-full bg-transparent font-mono text-xs text-ink outline-none"
-                  />
+                  <p className="font-mono text-xs text-muted">created {formatDate(s.createdAt)}</p>
                   <form action={revokeShareLink.bind(null, s.id)}>
                     <button className="stamp cursor-pointer text-stamp hover:bg-stamp hover:text-paper transition-colors">
                       Revoke
@@ -115,9 +110,7 @@ export default async function DocumentPage({
                   </form>
                 </div>
               ))}
-              <form action={createShareLink.bind(null, selected.id)}>
-                <button className="btn btn-ghost w-full">Issue share link</button>
-              </form>
+              <CreateShareLinkForm versionId={selected.id} />
             </div>
           </section>
 

@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DATABASE_URL: postgresql://postgres:test@localhost:5432/plan_saver_test
+      DIRECT_URL: postgresql://postgres:test@localhost:5432/plan_saver_test
+      BETTER_AUTH_SECRET: ci-secret-that-is-at-least-32-characters-long
+      BETTER_AUTH_URL: http://localhost:3000
+      RESEND_API_KEY: re_ci_test
+      MAGIC_LINK_FROM: Plan-Saver <ci@example.com>
+      ALLOWED_EMAILS: ci@example.com
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - run: bun install --frozen-lockfile
+      - run: bun run lint
+      - run: bun run typecheck
+      - run: bun run test
+      - run: bun run build
+      - run: bun run db:check
+      - name: Check committed patch whitespace
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [[ -n "$BASE_SHA" ]]; then
+            git diff --check "$BASE_SHA"...HEAD
+          else
+            git show --check --format= HEAD
+          fi

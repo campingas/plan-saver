@@ -25,7 +25,7 @@ export function CopySnippet({ command }: { command: string }) {
         className="btn btn-ghost shrink-0 border-y-0 border-r-0 border-l border-line-strong"
         aria-label="Copy command"
       >
-        {copied ? "Copied" : "Copy"}
+        <span aria-live="polite">{copied ? "Copied" : "Copy"}</span>
       </button>
     </div>
   );

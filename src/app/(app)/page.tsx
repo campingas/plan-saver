@@ -1,25 +1,14 @@
-import { count, desc, eq, max } from "drizzle-orm";
+import type { Metadata } from "next";
 import Link from "next/link";
-import { db } from "@/db";
-import { document, project } from "@/db/schema";
+import { listProjectsWithStats } from "@/db/queries";
 import { formatDate } from "@/lib/format";
 import { requireSession } from "@/lib/session";
 
+export const metadata: Metadata = { title: "Projects" };
+
 export default async function ProjectsPage() {
   const session = await requireSession();
-
-  const projects = await db
-    .select({
-      slug: project.slug,
-      displayName: project.displayName,
-      docCount: count(document.id),
-      lastActivity: max(document.updatedAt),
-    })
-    .from(project)
-    .leftJoin(document, eq(document.projectId, project.id))
-    .where(eq(project.userId, session.user.id))
-    .groupBy(project.id)
-    .orderBy(desc(max(document.updatedAt)));
+  const projects = await listProjectsWithStats(session.user.id);
 
   return (
     <div className="space-y-5">
@@ -31,7 +20,7 @@ export default async function ProjectsPage() {
       </div>
 
       {projects.length === 0 ? (
-        <div className="border border-line bg-panel-2 p-10 text-center">
+        <div className="border border-dashed border-line-strong bg-panel-2 p-10 text-center">
           <p className="eyebrow mb-3">Register empty</p>
           <p className="text-sm text-muted">
             Create an{" "}

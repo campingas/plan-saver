@@ -82,6 +82,15 @@ body {
   text-decoration: none;
 }
 
+/* nav cell that shows verbatim text (the email): no caps, no tracking */
+.nav-cell-plain {
+  text-transform: none;
+  letter-spacing: 0;
+}
+.nav-cell-plain:hover {
+  color: var(--muted);
+}
+
 /* outlined rubber-stamp chip: kind markers, statuses */
 .stamp {
   display: inline-block;
@@ -147,6 +156,10 @@ body {
 .field:focus {
   border-color: var(--accent);
   outline: none;
+}
+.field:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 /* framed drawing plate with crop-mark corners; wraps the viewer and the login card */

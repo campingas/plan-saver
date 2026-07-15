@@ -4,21 +4,21 @@ Keep this file limited to evidence-backed work. Move completed outcomes into `do
 
 ## Active
 
-- [ ] Finish the `refactor/structure-best-practices` work without broadening its current behavior boundary.
-- [ ] Review centralized queries and ownership helpers for consistent per-user filtering and share-token authorization.
-- [ ] Confirm environment validation matches `.env.example` and remains compatible with local development and Vercel.
-- [ ] Review shared document-kind and URL helpers against every plan/report route and selected-version link.
-- [ ] Reconcile the new schema indexes with the generated Drizzle migration and inspect the SQL before applying it anywhere.
-- [ ] Read the relevant bundled Next.js guides for every changed route, page, layout, cache, and server-action API.
-- [ ] Run `bun run lint` and `bun run build` with a valid local environment, then exercise login, ingest, browse, share, revoke, view, and download flows.
+- [ ] Review and merge the validated `refactor/structure-best-practices` worktree when ready.
 - [ ] Obtain explicit approval and confirm the target before running `bun run db:migrate` against a remote database.
 
 ## Next
 
-- [ ] Add automated ingest coverage for missing or revoked bearer tokens, malformed JSON, schema validation, document creation/update, and version allocation under contention.
-- [ ] Add automated viewer coverage for owner sessions, active shares, revoked or mismatched shares, missing versions, download headers, CSP, and private caching.
-- [ ] Add authorization coverage for API-token and share-link creation/revocation so mutations cannot cross user boundaries.
-- [ ] Add the chosen test command to `package.json` and route the resulting workflow from `AGENTS.md` after the test stack exists.
+- [ ] Verify the production runtime uses a dedicated least-privilege database role after the remote target and review window are explicitly approved; do not add role SQL to repository migrations.
+- [ ] Run a browser-based axe audit of login, API-token, document, share, and mutation-result states when a disposable authenticated browser environment is available.
+- [ ] Review expired session, verification, and rate-limit row counts after production use; add scheduled cleanup only if Better Auth's normal cleanup leaves sustained growth.
+
+## Scale triggers
+
+- [ ] Capture production-like `EXPLAIN (ANALYZE, BUFFERS)` evidence before adding indexes, caching, or cursor pagination; reassess when a document exceeds 200 versions, a project reaches hundreds of documents, or page-query p95 exceeds 300 ms.
+- [ ] Reassess postgres-js pool limits only if connection utilization exceeds 70%, connection errors appear, or cold-start connection spikes are measured.
+- [ ] Add storage accounting before retention or object-storage work; reassess when stored HTML exceeds 1 GB, monthly growth exceeds 250 MB, or backup/restore time exceeds 15 minutes.
+- [ ] Change frontend loading only when Web Vitals or Lighthouse evidence shows a regression after the current lazy iframe and image-preload improvements.
 
 ## Maintenance
 

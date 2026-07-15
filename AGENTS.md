@@ -7,6 +7,7 @@ Plan-Saver is an authenticated archive for generated HTML plans and reports, org
 - Read `README.md` for product behavior, local setup, the ingest API, and the security model.
 - Read `docs/current-state.md` before architecture, feature, database, or security work.
 - Read `docs/tasks.md` before starting follow-up work and update it when task status changes.
+- Read `docs/maintenance-window.md` before production migration or deployment work; it does not grant approval to execute remote steps.
 - For routes and UI, start in `src/app/`; for authentication and server actions, start in `src/lib/`.
 - For persistence changes, read `src/db/schema.ts`, `drizzle.config.ts`, and the matching files in `drizzle/`.
 
@@ -15,7 +16,11 @@ Plan-Saver is an authenticated archive for generated HTML plans and reports, org
 - Install dependencies: `bun install`.
 - Run locally: `bun run dev`.
 - Run normal validation: `bun run lint`.
+- Run explicit type validation: `bun run typecheck`.
+- Run native tests with disposable PostgreSQL 17: `bun run test`.
 - Run production validation: `bun run build`.
+- Check migration metadata: `bun run db:check` with a nonempty `DIRECT_URL`.
+- Check patch whitespace: `bun run diff:check`.
 - Generate a migration after an intentional schema change: `bun run db:generate`.
 - Apply migrations only after confirming the target database: `bun run db:migrate`.
 

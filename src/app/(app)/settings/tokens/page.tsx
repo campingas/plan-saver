@@ -1,21 +1,16 @@
-import { desc, eq } from "drizzle-orm";
-import { db } from "@/db";
-import { apiToken } from "@/db/schema";
+import type { Metadata } from "next";
+import { listUserTokens } from "@/db/queries";
 import { CreateTokenForm } from "@/components/create-token-form";
 import { revokeApiToken } from "@/lib/actions";
 import { formatDate } from "@/lib/format";
 import { requireSession } from "@/lib/session";
+import { appUrl } from "@/lib/urls";
+
+export const metadata: Metadata = { title: "API tokens" };
 
 export default async function TokensPage() {
   const session = await requireSession();
-
-  const tokens = await db
-    .select()
-    .from(apiToken)
-    .where(eq(apiToken.userId, session.user.id))
-    .orderBy(desc(apiToken.createdAt));
-
-  const base = process.env.BETTER_AUTH_URL ?? "https://plan-saver.vercel.app";
+  const tokens = await listUserTokens(session.user.id);
 
   return (
     <div className="max-w-2xl space-y-8">
@@ -71,7 +66,7 @@ export default async function TokensPage() {
           {`mkdir -p ~/.config/plan-saver
 cat > ~/.config/plan-saver/config.json <<'EOF'
 {
-  "url": "${base}",
+  "url": "${appUrl()}",
   "token": "ps_live_…"
 }
 EOF`}
