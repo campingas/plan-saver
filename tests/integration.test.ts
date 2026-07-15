@@ -14,10 +14,13 @@ import {
   user,
   version,
 } from "@/db/schema";
-import { listActiveShareLinks, listProjectDocuments } from "@/db/queries";
+import { getSharedVersion, listActiveShareLinks, listProjectDocuments } from "@/db/queries";
 import {
   createApiTokenForUser,
   createShareLinkForUser,
+  deleteDocumentForUser,
+  deleteProjectForUser,
+  deleteVersionForUser,
   revokeApiTokenForUser,
   revokeShareLinkForUser,
 } from "@/lib/mutations";
@@ -216,6 +219,69 @@ describe("authorized mutations", () => {
     expect(await listActiveShareLinks(ownerId, versionId)).toEqual([{ id: storedShare.id, createdAt: storedShare.createdAt }]);
     await expect(revokeShareLinkForUser(otherId, storedShare.id)).rejects.toThrow("Share link not found");
     expect(await revokeShareLinkForUser(ownerId, storedShare.id)).toBeTrue();
+  });
+});
+
+describe("deletion mutations", () => {
+  test("rejects deletion by a non-owner and keeps every row", async () => {
+    const { projectId, documentId, versionId } = await addDocument(ownerId);
+    expect(await deleteVersionForUser(otherId, versionId)).toBeNull();
+    expect(await deleteDocumentForUser(otherId, documentId)).toBeNull();
+    expect(await deleteProjectForUser(otherId, projectId)).toBeFalse();
+    expect(await db.select().from(version).where(eq(version.id, versionId))).toHaveLength(1);
+    expect(await db.select().from(document).where(eq(document.id, documentId))).toHaveLength(1);
+    expect(await db.select().from(project).where(eq(project.id, projectId))).toHaveLength(1);
+  });
+
+  test("deletes a non-last version, cascades its share link, and keeps the document", async () => {
+    const { documentId, versionId } = await addDocument(ownerId);
+    await db.insert(version).values({ id: crypto.randomUUID(), documentId, number: 2, title: "Title", html: "<p>v2</p>" });
+    const shareToken = await createShareLinkForUser(ownerId, versionId);
+    if (!shareToken) throw new Error("Owner could not create a share link");
+    expect(await deleteVersionForUser(ownerId, versionId)).toEqual({ projectSlug: "project-one", documentDeleted: false });
+    expect(await db.select().from(shareLink)).toHaveLength(0);
+    expect(await getSharedVersion(shareToken)).toBeNull();
+    expect(await db.select().from(version).where(eq(version.documentId, documentId))).toHaveLength(1);
+    expect(await db.select().from(document).where(eq(document.id, documentId))).toHaveLength(1);
+  });
+
+  test("deleting the last version removes the document but keeps the project", async () => {
+    const { projectId, documentId, versionId } = await addDocument(ownerId);
+    expect(await deleteVersionForUser(ownerId, versionId)).toEqual({ projectSlug: "project-one", documentDeleted: true });
+    expect(await db.select().from(document).where(eq(document.id, documentId))).toHaveLength(0);
+    expect(await db.select().from(project).where(eq(project.id, projectId))).toHaveLength(1);
+  });
+
+  test("document deletion cascades versions and share links but keeps the project", async () => {
+    const { projectId, documentId, versionId } = await addDocument(ownerId);
+    await createShareLinkForUser(ownerId, versionId);
+    expect(await deleteDocumentForUser(ownerId, documentId)).toEqual({ projectSlug: "project-one" });
+    expect(await db.select().from(version)).toHaveLength(0);
+    expect(await db.select().from(shareLink)).toHaveLength(0);
+    expect(await db.select().from(project).where(eq(project.id, projectId))).toHaveLength(1);
+  });
+
+  test("project deletion removes the owner's tree and spares another user's data", async () => {
+    const owned = await addDocument(ownerId);
+    const other = await addDocument(otherId, "other");
+    await createShareLinkForUser(ownerId, owned.versionId);
+    expect(await deleteProjectForUser(ownerId, owned.projectId)).toBeTrue();
+    expect(await db.select().from(project)).toHaveLength(1);
+    expect(await db.select().from(shareLink)).toHaveLength(0);
+    expect(await db.select().from(document).where(eq(document.id, other.documentId))).toHaveLength(1);
+    expect(await db.select().from(version).where(eq(version.id, other.versionId))).toHaveLength(1);
+  });
+
+  test("ingest still allocates after the latest version is deleted", async () => {
+    const token = await createApiTokenForUser(ownerId, "after-delete");
+    expect((await POST(ingestRequest(token, JSON.stringify(payload())))).status).toBe(201);
+    const second = await POST(ingestRequest(token, JSON.stringify(payload())));
+    expect((await second.json()).version).toBe(2);
+    const [latest] = await db.select().from(version).where(eq(version.number, 2));
+    expect(await deleteVersionForUser(ownerId, latest.id)).toEqual({ projectSlug: "plan-saver", documentDeleted: false });
+    const third = await POST(ingestRequest(token, JSON.stringify(payload())));
+    expect(third.status).toBe(201);
+    expect((await third.json()).version).toBe(2);
   });
 });
 

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getProjectForUser, listProjectDocuments } from "@/db/queries";
+import { DeleteProjectForm } from "@/components/delete-project-form";
 import { KindBadge } from "@/components/kind-badge";
 import { formatDate } from "@/lib/format";
 import { requireSession } from "@/lib/session";
@@ -55,6 +56,16 @@ export default async function ProjectPage({ params }: { params: Params }) {
           </Link>
         ))}
       </div>
+
+      <section className="border border-line-strong bg-panel lg:max-w-sm">
+        <h2 className="eyebrow border-b border-line-strong px-4 py-2">Danger zone</h2>
+        <div className="space-y-3 p-4">
+          <p className="text-xs text-muted">
+            Deletes this project with all of its plans, reports, revisions, and share links.
+          </p>
+          <DeleteProjectForm projectId={proj.id} slug={proj.slug} />
+        </div>
+      </section>
     </div>
   );
 }

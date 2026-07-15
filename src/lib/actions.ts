@@ -1,10 +1,15 @@
 "use server";
 
 import { refresh } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
+import { getProjectByIdForUser } from "@/db/queries";
 import {
   createApiTokenForUser,
   createShareLinkForUser,
+  deleteDocumentForUser,
+  deleteProjectForUser,
+  deleteVersionForUser,
   revokeApiTokenForUser,
   revokeShareLinkForUser,
 } from "@/lib/mutations";
@@ -56,4 +61,36 @@ export async function revokeShareLink(id: string): Promise<void> {
   const shareLinkId = idSchema.parse(id);
   await revokeShareLinkForUser(session.user.id, shareLinkId);
   refresh();
+}
+
+export async function deleteVersion(id: string): Promise<void> {
+  const session = await requireSession();
+  const versionId = idSchema.parse(id);
+  const result = await deleteVersionForUser(session.user.id, versionId);
+  if (result?.documentDeleted) redirect(`/p/${result.projectSlug}`);
+  refresh();
+}
+
+export async function deleteDocument(id: string): Promise<void> {
+  const session = await requireSession();
+  const documentId = idSchema.parse(id);
+  const result = await deleteDocumentForUser(session.user.id, documentId);
+  if (result) redirect(`/p/${result.projectSlug}`);
+  refresh();
+}
+
+export async function deleteProject(
+  projectId: string,
+  _prev: { error: string | null },
+  formData: FormData,
+): Promise<{ error: string | null }> {
+  void _prev;
+  const session = await requireSession();
+  const ownedProjectId = idSchema.parse(projectId);
+  const proj = await getProjectByIdForUser(session.user.id, ownedProjectId);
+  if (!proj || formData.get("confirm") !== proj.slug) {
+    return { error: "Type the project slug to confirm." };
+  }
+  await deleteProjectForUser(session.user.id, ownedProjectId);
+  redirect("/");
 }

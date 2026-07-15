@@ -15,7 +15,7 @@ Next.js (App Router) on Vercel, Supabase Postgres via Drizzle ORM (postgres-js o
 
 Confirm the `DIRECT_URL` target before migrating, and do not apply migrations to a remote database without explicit approval.
 
-Sign-in is restricted to the emails in `ALLOWED_EMAILS`, including sessions created before an allowlist change. Projects own documents, and every authenticated read and mutation derives document ownership through the project.
+Sign-in is restricted to the emails in `ALLOWED_EMAILS`, including sessions created before an allowlist change. Projects own documents, and every authenticated read and mutation derives document ownership through the project. Owners can delete a single version, a whole document, or an entire project; deletes cascade to child rows, deleting the last version also removes its document, and project deletion requires typing the project slug.
 
 Run `bun run test` for the native Bun suite. It starts and removes a disposable `postgres:17-alpine` container by default, or destructively resets the dedicated database named by `TEST_DATABASE_URL` when its database name contains `test`.
 

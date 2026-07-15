@@ -20,6 +20,15 @@ export async function getProjectForUser(userId: string, slug: string) {
   return row ?? null;
 }
 
+export async function getProjectByIdForUser(userId: string, projectId: string) {
+  const [row] = await db
+    .select()
+    .from(project)
+    .where(and(eq(project.userId, userId), eq(project.id, projectId)))
+    .limit(1);
+  return row ?? null;
+}
+
 export function listProjectsWithStats(userId: string) {
   return db
     .select({
