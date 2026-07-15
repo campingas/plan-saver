@@ -6,6 +6,7 @@ import {
   getSharedVersionHtml,
 } from "@/db/queries";
 import { highlightDocumentHtml } from "@/lib/document-highlighting";
+import { displayAgentName } from "@/lib/agent";
 
 const CSP = [
   "default-src 'none'",
@@ -28,17 +29,17 @@ export async function resolveViewerContent(input: {
     const authorized = await getSharedVersionForViewer(input.shareToken, input.versionId);
     if (!authorized) return null;
     const html = await getSharedVersionHtml(input.versionId, input.shareToken);
-    return html === null ? null : { ...authorized, html };
+    return html === null ? null : { ...authorized, agent: displayAgentName(authorized.agent), html };
   }
   if (!input.userId) return null;
   const authorized = await getOwnedVersionForViewer(input.versionId, input.userId);
   if (!authorized) return null;
   const html = await getOwnedVersionHtml(input.versionId, input.userId);
-  return html === null ? null : { ...authorized, html };
+  return html === null ? null : { ...authorized, agent: displayAgentName(authorized.agent), html };
 }
 
 export function viewerResponse(
-  content: { number: number; slug: string; html: string } | null,
+  content: { number: number; slug: string; agent?: string | null; html: string } | null,
   download: boolean,
 ): Response {
   if (!content) {
@@ -58,5 +59,8 @@ export function viewerResponse(
   if (download) {
     headers["Content-Disposition"] = `attachment; filename="${content.slug}-v${content.number}.html"`;
   }
-  return new Response(download ? content.html : highlightDocumentHtml(content.html), { headers });
+  return new Response(
+    download ? content.html : highlightDocumentHtml(content.html, content.agent ?? null),
+    { headers },
+  );
 }

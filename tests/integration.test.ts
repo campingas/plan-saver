@@ -29,6 +29,7 @@ import { hashToken } from "@/lib/tokens";
 import { highlightDocumentHtml } from "@/lib/document-highlighting";
 import { MAX_HIGHLIGHT_CHARS } from "@/lib/code-highlighting";
 import { machineSetupCommand, TOKEN_PLACEHOLDER } from "@/lib/machine-setup";
+import { MAX_AGENT_NAME_LENGTH, UNKNOWN_AGENT } from "@/lib/agent";
 import { resolveViewerContent, viewerResponse } from "@/lib/viewer";
 import {
   MAX_BODY_BYTES,
@@ -61,13 +62,20 @@ async function resetRows() {
   ]);
 }
 
-async function addDocument(userId: string, suffix = "one") {
+async function addDocument(userId: string, suffix = "one", agent?: string) {
   const projectId = crypto.randomUUID();
   const documentId = crypto.randomUUID();
   const versionId = crypto.randomUUID();
   await db.insert(project).values({ id: projectId, userId, slug: `project-${suffix}`, displayName: "Project" });
   await db.insert(document).values({ id: documentId, projectId, slug: `document-${suffix}`, kind: "plan", title: "Title" });
-  await db.insert(version).values({ id: versionId, documentId, number: 1, title: "Title", html: "<h1>safe</h1>" });
+  await db.insert(version).values({
+    id: versionId,
+    documentId,
+    number: 1,
+    title: "Title",
+    html: "<h1>safe</h1>",
+    meta: agent === undefined ? undefined : { agent },
+  });
   return { projectId, documentId, versionId };
 }
 
@@ -194,6 +202,41 @@ describe("ingest", () => {
     expect((await POST(ingestRequest(token, JSON.stringify(payload({ slug: "large-meta", meta: exactMeta }))))).status).toBe(400);
   });
 
+  test("normalizes valid agent metadata and rejects invalid agent names", async () => {
+    const token = await createApiTokenForUser(ownerId, "agents");
+    const valid = await POST(
+      ingestRequest(
+        token,
+        JSON.stringify(payload({ slug: "agent-valid", meta: { agent: "  Codex  ", branch: "main" } })),
+      ),
+    );
+    expect(valid.status).toBe(201);
+    const [stored] = await db.select({ meta: version.meta }).from(version).where(eq(version.title, "Optimization plan"));
+    expect(stored.meta).toMatchObject({ agent: "Codex", branch: "main" });
+
+    for (const agent of ["", "Claude\nCode", "x".repeat(MAX_AGENT_NAME_LENGTH + 1), 42]) {
+      const response = await POST(
+        ingestRequest(token, JSON.stringify(payload({ slug: "agent-invalid", meta: { agent } }))),
+      );
+      expect(response.status).toBe(400);
+    }
+  });
+
+  test("lists the newest revision agent without changing document versioning", async () => {
+    const token = await createApiTokenForUser(ownerId, "latest-agent");
+    expect(
+      (await POST(ingestRequest(token, JSON.stringify(payload({ slug: "agent-history", meta: { agent: "Codex" } }))))).status,
+    ).toBe(201);
+    expect(
+      (await POST(ingestRequest(token, JSON.stringify(payload({ slug: "agent-history", meta: { agent: "Claude" } }))))).status,
+    ).toBe(201);
+
+    const [proj] = await db.select().from(project).where(eq(project.userId, ownerId));
+    const row = (await listProjectDocuments(ownerId, proj.id)).find((item) => item.slug === "agent-history");
+    expect(row?.agent).toBe("Claude");
+    expect(row?.versionCount).toBe(2);
+  });
+
   test("isolates identical project and document slugs by owner", async () => {
     const ownerToken = await createApiTokenForUser(ownerId, "owner");
     const otherToken = await createApiTokenForUser(otherId, "other");
@@ -290,13 +333,17 @@ describe("deletion mutations", () => {
 
 describe("viewer", () => {
   test("authorizes owner and active share, rejects other owner and revoked or mismatched shares", async () => {
-    const owned = await addDocument(ownerId, "viewer");
+    const owned = await addDocument(ownerId, "viewer", "Codex");
     const other = await addDocument(otherId, "other-viewer");
-    expect((await resolveViewerContent({ versionId: owned.versionId, userId: ownerId }))?.html).toBe("<h1>safe</h1>");
+    const ownerContent = await resolveViewerContent({ versionId: owned.versionId, userId: ownerId });
+    expect(ownerContent?.html).toBe("<h1>safe</h1>");
+    expect(ownerContent?.agent).toBe("Codex");
     expect(await resolveViewerContent({ versionId: owned.versionId, userId: otherId })).toBeNull();
     const token = await createShareLinkForUser(ownerId, owned.versionId);
     if (!token) throw new Error("Owner could not create a share link");
-    expect((await resolveViewerContent({ versionId: owned.versionId, shareToken: token }))?.html).toBe("<h1>safe</h1>");
+    const sharedContent = await resolveViewerContent({ versionId: owned.versionId, shareToken: token });
+    expect(sharedContent?.html).toBe("<h1>safe</h1>");
+    expect(sharedContent?.agent).toBe("Codex");
     expect(await resolveViewerContent({ versionId: other.versionId, shareToken: token })).toBeNull();
     const [link] = await db.select().from(shareLink).where(eq(shareLink.tokenHash, hashToken(token)));
     await revokeShareLinkForUser(ownerId, link.id);
@@ -305,12 +352,13 @@ describe("viewer", () => {
 
   test("highlights display HTML while preserving raw downloads and security headers", async () => {
     const html = '<!doctype html><html><head></head><body><pre><code class="language-typescript">const value = 1;</code></pre></body></html>';
-    const display = viewerResponse({ number: 3, slug: "safe-name", html }, false);
-    const response = viewerResponse({ number: 3, slug: "safe-name", html }, true);
+    const display = viewerResponse({ number: 3, slug: "safe-name", agent: "Codex", html }, false);
+    const response = viewerResponse({ number: 3, slug: "safe-name", agent: "Codex", html }, true);
     const displayHtml = await display.text();
 
     expect(displayHtml).toContain('class="language-typescript hljs"');
     expect(displayHtml).toContain("hljs-keyword");
+    expect(displayHtml).toContain("Agent: <span data-plan-saver-agent=\"\">Codex</span>");
     expect(await response.text()).toBe(html);
     expect(response.status).toBe(200);
     expect(response.headers.get("content-security-policy")).toContain("default-src 'none'");
@@ -357,6 +405,24 @@ describe("code highlighting", () => {
     const result = highlightDocumentHtml('<pre><code class="language-html">&lt;div');
     expect(result).toContain("&lt;div");
     expect(result).toContain("hljs");
+  });
+
+  test("adds safe per-revision footer attribution without duplicating marked templates", () => {
+    const marked = highlightDocumentHtml(
+      "<footer>Generated by <span data-plan-saver-agent>Old</span></footer>",
+      "Claude",
+    );
+    const existingFooter = highlightDocumentHtml("<main>Body</main><footer>Existing</footer>", "Codex");
+    const fallback = highlightDocumentHtml("<main>Body</main>", null);
+    const escaped = highlightDocumentHtml("<main>Body</main>", "Agent <script>");
+
+    expect(marked.match(/data-plan-saver-agent/g)).toHaveLength(1);
+    expect(marked).toContain('data-plan-saver-agent="">Claude</span>');
+    expect(existingFooter).toContain("Existing · Agent:");
+    expect(fallback).toContain('data-plan-saver-footer=""');
+    expect(fallback).toContain(`>${UNKNOWN_AGENT}</span>`);
+    expect(escaped).toContain("Agent &lt;script&gt;");
+    expect(escaped).not.toContain("<script>");
   });
 });
 

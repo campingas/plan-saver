@@ -6,12 +6,19 @@ import { apiToken, document, documentKinds, project, version } from "@/db/schema
 import { hashToken } from "@/lib/tokens";
 import { absoluteUrl, documentPath } from "@/lib/urls";
 import { logServerEvent } from "@/lib/log";
+import { MAX_AGENT_NAME_LENGTH } from "@/lib/agent";
 
 const kebab = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 export const MAX_HTML_BYTES = 2 * 1024 * 1024;
 export const MAX_META_BYTES = 64 * 1024;
 export const MAX_BODY_BYTES = 8 * 1024 * 1024;
 const encoder = new TextEncoder();
+const agentNameSchema = z
+  .string()
+  .trim()
+  .min(1, "agent is required when provided")
+  .max(MAX_AGENT_NAME_LENGTH, `agent must be at most ${MAX_AGENT_NAME_LENGTH} characters`)
+  .refine((value) => !/[\u0000-\u001f\u007f]/.test(value), "agent must not contain control characters");
 
 function utf8Bytes(value: string): number {
   return encoder.encode(value).byteLength;
@@ -27,7 +34,8 @@ const bodySchema = z.object({
     .min(1)
     .refine((value) => utf8Bytes(value) <= MAX_HTML_BYTES, "html exceeds 2 MiB"),
   meta: z
-    .record(z.string(), z.unknown())
+    .object({ agent: agentNameSchema.optional() })
+    .catchall(z.unknown())
     .refine(
       (value) => utf8Bytes(JSON.stringify(value)) <= MAX_META_BYTES,
       "serialized meta exceeds 64 KiB",

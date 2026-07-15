@@ -7,6 +7,7 @@ import { KindBadge } from "@/components/kind-badge";
 import { formatDate } from "@/lib/format";
 import { requireSession } from "@/lib/session";
 import { documentPath } from "@/lib/urls";
+import { displayAgentName } from "@/lib/agent";
 
 type Params = Promise<{ project: string }>;
 
@@ -31,8 +32,9 @@ export default async function ProjectPage({ params }: { params: Params }) {
       </div>
 
       <div className="border border-line-strong bg-panel">
-        <div className="grid grid-cols-[auto_1fr_auto_auto] items-baseline gap-x-6 border-b border-line-strong px-5 py-2.5">
+        <div className="grid grid-cols-[auto_minmax(4.5rem,7rem)_1fr_auto_auto] items-baseline gap-x-3 border-b border-line-strong px-5 py-2.5 sm:gap-x-6">
           <span className="eyebrow w-16">Kind</span>
+          <span className="eyebrow">Agent</span>
           <span className="eyebrow">Document</span>
           <span className="eyebrow text-right">Rev</span>
           <span className="eyebrow hidden text-right sm:block">Updated</span>
@@ -41,10 +43,16 @@ export default async function ProjectPage({ params }: { params: Params }) {
           <Link
             key={`${d.slug}-${d.kind}`}
             href={documentPath(proj.slug, d.slug, d.kind)}
-            className="group grid grid-cols-[auto_1fr_auto_auto] items-center gap-x-6 border-b border-line px-5 py-3.5 transition-colors last:border-b-0 hover:bg-panel-2"
+            className="group grid grid-cols-[auto_minmax(4.5rem,7rem)_1fr_auto_auto] items-center gap-x-3 border-b border-line px-5 py-3.5 transition-colors last:border-b-0 hover:bg-panel-2 sm:gap-x-6"
           >
             <span className="w-16">
               <KindBadge kind={d.kind} />
+            </span>
+            <span
+              title={displayAgentName(d.agent)}
+              className="truncate font-mono text-xs text-muted"
+            >
+              {displayAgentName(d.agent)}
             </span>
             <span className="font-medium text-ink group-hover:text-accent transition-colors">
               {d.title}

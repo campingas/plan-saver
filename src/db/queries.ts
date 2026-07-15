@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, count, desc, eq, isNull, max } from "drizzle-orm";
+import { and, asc, count, desc, eq, isNull, max, sql } from "drizzle-orm";
 import { db } from "./index";
 import {
   apiToken,
@@ -52,6 +52,7 @@ export function listProjectDocuments(userId: string, projectId: string) {
       title: document.title,
       updatedAt: document.updatedAt,
       versionCount: count(version.id),
+      agent: sql<string | null>`(array_agg(${version.meta}->>'agent' order by ${version.number} desc))[1]`,
     })
     .from(document)
     .innerJoin(project, eq(document.projectId, project.id))
@@ -102,7 +103,11 @@ export function listVersions(userId: string, documentId: string) {
 
 export async function getOwnedVersionForViewer(versionId: string, userId: string) {
   const [row] = await db
-    .select({ number: version.number, slug: document.slug })
+    .select({
+      number: version.number,
+      slug: document.slug,
+      agent: sql<string | null>`${version.meta}->>'agent'`,
+    })
     .from(version)
     .innerJoin(document, eq(version.documentId, document.id))
     .innerJoin(project, eq(document.projectId, project.id))
@@ -113,7 +118,11 @@ export async function getOwnedVersionForViewer(versionId: string, userId: string
 
 export async function getSharedVersionForViewer(token: string, versionId: string) {
   const [row] = await db
-    .select({ number: version.number, slug: document.slug })
+    .select({
+      number: version.number,
+      slug: document.slug,
+      agent: sql<string | null>`${version.meta}->>'agent'`,
+    })
     .from(shareLink)
     .innerJoin(version, eq(shareLink.versionId, version.id))
     .innerJoin(document, eq(version.documentId, document.id))
