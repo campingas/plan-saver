@@ -8,8 +8,9 @@ import {
   listVersions,
 } from "@/db/queries";
 import { KindBadge } from "@/components/kind-badge";
+import { ConfirmDeleteButton } from "@/components/confirm-delete-button";
 import { CreateShareLinkForm } from "@/components/create-share-link-form";
-import { revokeShareLink } from "@/lib/actions";
+import { deleteDocument, deleteVersion, revokeShareLink } from "@/lib/actions";
 import { formatDate } from "@/lib/format";
 import { requireSession } from "@/lib/session";
 import { documentPath } from "@/lib/urls";
@@ -120,6 +121,26 @@ export default async function DocumentPage({
           >
             ↓ Download raw HTML
           </a>
+
+          <section className="border border-line-strong bg-panel">
+            <h2 className="eyebrow border-b border-line-strong px-4 py-2">Danger</h2>
+            <div className="space-y-3 p-4">
+              <div>
+                <ConfirmDeleteButton
+                  action={deleteVersion.bind(null, selected.id)}
+                  label={`Delete rev v${selected.number}`}
+                  confirmLabel="Confirm delete revision"
+                />
+              </div>
+              <div>
+                <ConfirmDeleteButton
+                  action={deleteDocument.bind(null, doc.id)}
+                  label="Delete document"
+                  confirmLabel="Confirm delete all revisions"
+                />
+              </div>
+            </div>
+          </section>
         </aside>
 
         {/* sandbox without allow-same-origin: archived HTML runs its inline
