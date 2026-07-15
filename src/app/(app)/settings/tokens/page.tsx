@@ -22,7 +22,7 @@ export default async function TokensPage() {
         </p>
       </div>
 
-      <CreateTokenForm />
+      <CreateTokenForm appUrl={appUrl()} />
 
       {tokens.length > 0 && (
         <div className="border border-line-strong bg-panel">
@@ -58,20 +58,6 @@ export default async function TokensPage() {
           ))}
         </div>
       )}
-
-      <section className="space-y-2">
-        <h2 className="eyebrow">Machine setup</h2>
-        <p className="text-sm text-muted">Save the token where the skill reads it:</p>
-        <pre className="overflow-x-auto border border-line bg-panel-2 p-4 font-mono text-xs leading-relaxed text-ink">
-          {`mkdir -p ~/.config/plan-saver
-cat > ~/.config/plan-saver/config.json <<'EOF'
-{
-  "url": "${appUrl()}",
-  "token": "ps_live_…"
-}
-EOF`}
-        </pre>
-      </section>
     </div>
   );
 }

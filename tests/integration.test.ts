@@ -26,6 +26,9 @@ import {
 } from "@/lib/mutations";
 import { retainAllowedSession } from "@/lib/session";
 import { hashToken } from "@/lib/tokens";
+import { highlightDocumentHtml } from "@/lib/document-highlighting";
+import { MAX_HIGHLIGHT_CHARS } from "@/lib/code-highlighting";
+import { machineSetupCommand, TOKEN_PLACEHOLDER } from "@/lib/machine-setup";
 import { resolveViewerContent, viewerResponse } from "@/lib/viewer";
 import {
   MAX_BODY_BYTES,
@@ -300,15 +303,60 @@ describe("viewer", () => {
     expect(await resolveViewerContent({ versionId: owned.versionId, shareToken: token })).toBeNull();
   });
 
-  test("sets security and download headers", async () => {
-    const response = viewerResponse({ number: 3, slug: "safe-name", html: "<p>body</p>" }, true);
+  test("highlights display HTML while preserving raw downloads and security headers", async () => {
+    const html = '<!doctype html><html><head></head><body><pre><code class="language-typescript">const value = 1;</code></pre></body></html>';
+    const display = viewerResponse({ number: 3, slug: "safe-name", html }, false);
+    const response = viewerResponse({ number: 3, slug: "safe-name", html }, true);
+    const displayHtml = await display.text();
+
+    expect(displayHtml).toContain('class="language-typescript hljs"');
+    expect(displayHtml).toContain("hljs-keyword");
+    expect(await response.text()).toBe(html);
     expect(response.status).toBe(200);
     expect(response.headers.get("content-security-policy")).toContain("default-src 'none'");
     expect(response.headers.get("content-security-policy")).toContain("frame-ancestors 'self'");
+    expect(response.headers.get("content-security-policy")).not.toContain("https:");
     expect(response.headers.get("cache-control")).toBe("private, no-store");
     expect(response.headers.get("x-content-type-options")).toBe("nosniff");
     expect(response.headers.get("content-disposition")).toBe('attachment; filename="safe-name-v3.html"');
     expect(viewerResponse(null, false).status).toBe(404);
+  });
+});
+
+describe("code highlighting", () => {
+  test("builds placeholder and issued-token machine setup commands", () => {
+    const placeholder = machineSetupCommand("https://plans.example");
+    const issued = machineSetupCommand("https://plans.example", "ps_live_issued");
+
+    expect(placeholder).toContain(`"token": "${TOKEN_PLACEHOLDER}"`);
+    expect(issued).toContain('"url": "https://plans.example"');
+    expect(issued).toContain('"token": "ps_live_issued"');
+    expect(issued.endsWith("\nEOF")).toBeTrue();
+  });
+
+  test("highlights explicit, unknown, and unlabelled languages without emitting code markup", () => {
+    const explicit = highlightDocumentHtml('<pre><code class="language-typescript">const value = &lt;script&gt;;</code></pre>');
+    const unknown = highlightDocumentHtml('<pre><code class="language-madeup">{"value": true}</code></pre>');
+    const unlabelled = highlightDocumentHtml("<pre><code>const value = 1;</code></pre>");
+
+    expect(explicit).toContain("hljs-keyword");
+    expect(explicit).not.toContain("<script>");
+    expect(unknown).toContain('class="language-madeup hljs"');
+    expect(unlabelled).toContain('class="hljs"');
+  });
+
+  test("leaves already highlighted and oversized blocks unchanged", () => {
+    const highlighted = '<pre><code class="hljs"><span class="hljs-keyword">const</span></code></pre>';
+    const oversized = `<pre><code>${"x".repeat(MAX_HIGHLIGHT_CHARS + 1)}</code></pre>`;
+
+    expect(highlightDocumentHtml(highlighted)).toBe(highlighted);
+    expect(highlightDocumentHtml(oversized)).toBe(oversized);
+  });
+
+  test("keeps malformed code blocks viewable", () => {
+    const result = highlightDocumentHtml('<pre><code class="language-html">&lt;div');
+    expect(result).toContain("&lt;div");
+    expect(result).toContain("hljs");
   });
 });
 

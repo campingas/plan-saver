@@ -23,6 +23,8 @@ Run `bun run test` for the native Bun suite. It starts and removes a disposable 
 
 Create a token at `/settings/tokens`, then:
 
+Before creation, the token page shows a generic machine-setup command. After creation, the once-only plaintext token is followed immediately by the same command with the application URL and new token filled in; the plaintext value is not available again after leaving that result state.
+
 ```
 POST /api/v1/documents
 Authorization: Bearer ps_live_...
@@ -44,6 +46,6 @@ The skill reads `~/.config/plan-saver/config.json` (`{ "url": ..., "token": ... 
 
 ## Security model
 
-Stored documents are executable HTML, so they are authorized before their content is read, served only from `/api/view/[versionId]` with restrictive security headers, and embedded via `<iframe sandbox="allow-scripts">` without `allow-same-origin`. Archived scripts can never reach the app's cookies or DOM. API, share, and Better Auth magic-link tokens are hashed at rest and shown only when issued. Better Auth uses database-backed rate limiting, seven-day sessions refreshed daily, and five-minute magic links.
+Stored documents are executable HTML, so they are authorized before their content is read, served only from `/api/view/[versionId]` with restrictive security headers, and embedded via `<iframe sandbox="allow-scripts">` without `allow-same-origin`. Archived scripts can never reach the app's cookies or DOM. Display responses apply local syntax highlighting to code blocks without permitting CDN resources, while raw HTML downloads remain unchanged. API, share, and Better Auth magic-link tokens are hashed at rest and shown only when issued. Better Auth uses database-backed rate limiting, seven-day sessions refreshed daily, and five-minute magic links.
 
 Production migration windows follow [`docs/maintenance-window.md`](docs/maintenance-window.md); reading that runbook does not authorize its remote steps.

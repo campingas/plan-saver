@@ -2,8 +2,10 @@
 
 import { useActionState, useId } from "react";
 import { createApiToken } from "@/lib/actions";
+import { HighlightedCode } from "@/components/highlighted-code";
+import { machineSetupCommand } from "@/lib/machine-setup";
 
-export function CreateTokenForm() {
+export function CreateTokenForm({ appUrl }: { appUrl: string }) {
   const fieldId = useId();
   const [state, action, pending] = useActionState(createApiToken, {
     token: null,
@@ -36,6 +38,11 @@ export function CreateTokenForm() {
           </div>
         )}
       </div>
+      <section className="space-y-2">
+        <h2 className="eyebrow">Machine setup</h2>
+        <p className="text-sm text-muted">Save the token where the skill reads it:</p>
+        <HighlightedCode code={machineSetupCommand(appUrl, state.token ?? undefined)} language="bash" />
+      </section>
     </div>
   );
 }

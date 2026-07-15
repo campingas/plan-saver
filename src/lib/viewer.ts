@@ -5,6 +5,7 @@ import {
   getSharedVersionForViewer,
   getSharedVersionHtml,
 } from "@/db/queries";
+import { highlightDocumentHtml } from "@/lib/document-highlighting";
 
 const CSP = [
   "default-src 'none'",
@@ -57,5 +58,5 @@ export function viewerResponse(
   if (download) {
     headers["Content-Disposition"] = `attachment; filename="${content.slug}-v${content.number}.html"`;
   }
-  return new Response(content.html, { headers });
+  return new Response(download ? content.html : highlightDocumentHtml(content.html), { headers });
 }
