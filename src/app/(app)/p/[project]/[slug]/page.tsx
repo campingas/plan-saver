@@ -115,20 +115,25 @@ export default async function DocumentPage({
             </div>
           </section>
 
-          <div className="space-y-2">
-            <a
-              href={`/api/view/${selected.id}?download=1`}
-              className="eyebrow block hover:text-accent transition-colors"
-            >
-              ↓ Download raw HTML
-            </a>
-            <a
-              href={`/api/view/${selected.id}?download=markdown`}
-              className="eyebrow block hover:text-accent transition-colors"
-            >
-              ↓ Download raw Markdown
-            </a>
-          </div>
+          <section className="border border-line-strong bg-panel">
+            <h2 className="eyebrow border-b border-line-strong px-4 py-2">
+              Downloads · v{selected.number}
+            </h2>
+            <div className="space-y-3 p-4">
+              <a
+                href={`/api/view/${selected.id}?download=1`}
+                className="btn btn-ghost w-full text-center"
+              >
+                ↓ Download raw HTML
+              </a>
+              <a
+                href={`/api/view/${selected.id}?download=markdown`}
+                className="btn btn-ghost w-full text-center"
+              >
+                ↓ Download raw Markdown
+              </a>
+            </div>
+          </section>
 
           <section className="border border-line-strong bg-panel">
             <h2 className="eyebrow border-b border-line-strong px-4 py-2">Danger</h2>
