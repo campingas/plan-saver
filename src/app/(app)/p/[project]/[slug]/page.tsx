@@ -124,13 +124,13 @@ export default async function DocumentPage({
                 href={`/api/view/${selected.id}?download=1`}
                 className="btn btn-ghost w-full text-center"
               >
-                ↓ Download raw HTML
+                raw HTML
               </a>
               <a
                 href={`/api/view/${selected.id}?download=markdown`}
                 className="btn btn-ghost w-full text-center"
               >
-                ↓ Download raw Markdown
+                raw Markdown
               </a>
             </div>
           </section>
